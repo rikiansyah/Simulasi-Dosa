@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kalkulator Pahala & Dosa — Database Dalil</title>
+  <style>
+    :root{
+      --bg:#f6f9fc; --card:#ffffff; --muted:#6b7280; --accent:#0f766e; --accent-2:#0369a1;
+      --danger:#c2410c; --border:#e6eef6; --glass: rgba(15,118,110,0.06);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    body{ margin:0; padding:24px; background:linear-gradient(180deg,var(--bg),#fff); color:#0f172a; }
+    .wrap{ max-width:980px; margin:0 auto; }
+    header{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+    h1{ font-size:1.125rem; margin:0; }
+    p.lead{ margin:6px 0 0; color:var(--muted); font-size:0.95rem; }
+    .panel{ background:var(--card); border:1px solid var(--border); padding:14px; border-radius:10px; box-shadow:0 6px 18px rgba(12,18,31,0.04); }
+    .controls{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; margin-top:12px; }
+    label{ font-size:0.9rem; color:var(--muted); display:block; margin-bottom:6px; }
+    select,input[type="number"]{ width:100%; padding:10px 12px; border-radius:8px; border:1px solid #dbe7f0; background:#fff; font-size:0.98rem; }
+    .row{ display:flex; gap:12px; margin-top:12px; }
+    .result{ margin-top:14px; display:grid; grid-template-columns: 1fr 260px; gap:12px; }
+    .card{ padding:12px; border-radius:8px; background:linear-gradient(180deg,#ffffff,var(--glass)); border:1px solid var(--border); }
+    .big{ font-weight:700; color:var(--accent); font-size:1.06rem; }
+    .small{ color:var(--muted); font-size:0.92rem; }
+    .dalil{ margin-top:10px; background:#fffaf0; padding:10px; border-radius:8px; border:1px solid #fde7bf; color:#5a4630; font-size:0.9rem; }
+    .disclaimer{ margin-top:12px; font-size:0.88rem; color:var(--muted); }
+    button{ padding:8px 12px; border-radius:8px; border:1px solid #cfe8f7; background:linear-gradient(180deg,#f8feff,#e9f8fb); cursor:pointer; color:var(--accent-2); font-weight:600; }
+    .btn-ghost{ background:transparent; border:1px dashed #dbe7f0; color:var(--muted); }
+    .db-panel{ margin-top:14px; }
+    table{ width:100%; border-collapse:collapse; margin-top:8px; font-size:0.92rem; }
+    th,td{ padding:8px 10px; border-bottom:1px solid #f1f5f9; text-align:left; vertical-align:top; }
+    th{ color:var(--muted); font-weight:700; font-size:0.85rem; background:transparent; }
+    .muted-row{ color:var(--muted); font-size:0.86rem; }
+    .actions{ display:flex; gap:6px; }
+    .chip{ display:inline-block; padding:4px 8px; border-radius:999px; background:#eef6f9; color:#03455f; font-weight:600; font-size:0.82rem; }
+    .foot{ margin-top:14px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+    @media (max-width:880px){ .controls{ grid-template-columns: 1fr; } .result{ grid-template-columns: 1fr; } }
+    /* small input form */
+    .db-form{ display:grid; grid-template-columns: 1fr 1fr 120px; gap:8px; margin-top:8px; }
+    .db-form input, .db-form select{ padding:8px; font-size:0.9rem; }
+    .btn-danger{ background:linear-gradient(180deg,#ffefe7,#ffd6c4); border:1px solid #ffc4a6; color:var(--danger); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Kalkulator Pahala & Dosa — Database Dalil</h1>
+        <p class="lead">Pilih kategori & amalan/dosa (diseleksi dari database dalil yang punya parameter). Masukkan angka (nominal Rp untuk sedekah atau jumlah kejadian) — hasil otomatis.</p>
+      </div>
+      <div style="text-align:right">
+        <button id="toggleDbBtn" class="btn-ghost">Lihat / Edit Database</button>
+      </div>
+    </header>
+
+    <div class="panel">
+      <div class="controls">
+        <div>
+          <label for="category">Kategori</label>
+          <select id="category" aria-label="Kategori">
+            <option value="pahala">Pahala</option>
+            <option value="dosa">Dosa</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="actionSelect">Pilih Amalan / Dosa</label>
+          <select id="actionSelect" aria-label="Amalan atau Dosa">
+            <!-- diisi JS -->
+          </select>
+        </div>
+
+        <div>
+          <label for="singleInput">Nominal (Rp) atau Jumlah Kejadian</label>
+          <input id="singleInput" type="number" min="0" placeholder="Contoh: 50000 atau 100" />
+        </div>
+      </div>
+
+      <div class="result">
+        <div class="card">
+          <div class="small">Hasil Perkiraan untuk pilihan</div>
+          <div id="resultTitle" class="big" style="margin-top:8px;">—</div>
+          <div id="resultMain" style="margin-top:10px; font-weight:700; font-size:1.02rem;">—</div>
+          <div id="resultDetail" class="small" style="margin-top:8px;">Pilih kategori & amalan lalu masukkan angka untuk melihat perhitungan.</div>
+
+          <div class="dalil" id="dalilBox" style="display:none;"></div>
+          <div class="disclaimer">Penerimaan pahala / penolakan amal mutlak di tangan Allah (Ridho Allah). Angka adalah estimasi/perumpamaan berdasarkan dalil yang tercantum; gunakan sebagai ilustrasi.</div>
+        </div>
+
+        <div class="card">
+          <div class="small">Ringkasan Cepat</div>
+          <div style="margin-top:10px">
+            <div class="muted-row">Input saat ini</div>
+            <div id="summaryInput" style="margin-top:6px; font-weight:700;">—</div>
+          </div>
+
+          <div style="margin-top:14px;">
+            <div class="muted-row">Sumber singkat</div>
+            <div id="sourceShort" style="margin-top:6px; color:#153e75;">—</div>
+          </div>
+
+          <div style="margin-top:14px; text-align:right;">
+            <button id="resetBtn">Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="foot">
+        <div class="muted-row">Database memuat entri dengan parameter (multiplier) yang dapat diedit. Untuk entri tanpa multiplier tampil kualitatif.</div>
+        <div><span class="chip" id="dbCount">0 entri</span></div>
+      </div>
+    </div>
+
+    <div id="dbPanel" class="panel db-panel" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <strong>Database Dalil (editable)</strong>
+          <div class="muted" style="margin-top:6px;">Tambahkan / ubah entri. Hanya entri yang ada kategori & id akan ditampilkan di dropdown. Perubahan disimpan di browser (localStorage).</div>
+        </div>
+        <div style="text-align:right">
+          <button id="addSampleBtn">Tambah Contoh Cepat</button>
+          <button id="closeDbBtn" class="btn-ghost">Tutup</button>
+        </div>
+      </div>
+
+      <div class="db-form" style="margin-top:12px;">
+        <input id="dbId" placeholder="id (unik, huruf_angka)" />
+        <input id="dbLabel" placeholder="Label (tampil)" />
+        <select id="dbCategory"><option value="pahala">pahala</option><option value="dosa">dosa</option></select>
+        <input id="dbMultiplier" placeholder="multiplier (kosong = kualitatif)" />
+        <input id="dbUnit" placeholder="unit (mis. ×, tahun...)" />
+        <input id="dbSource" placeholder="sumber singkat (mis. Al-Baqarah 2:261)" />
+        <div style="display:flex; gap:8px;">
+          <button id="saveDbBtn">Simpan</button>
+          <button id="clearFormBtn" class="btn-ghost">Bersihkan</button>
+        </div>
+      </div>
+
+      <table id="dbTable">
+        <thead><tr><th>id</th><th>Label</th><th>Kategori</th><th>Multiplier</th><th>Unit</th><th>Sumber</th><th>Aksi</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <div style="margin-top:10px; display:flex; gap:8px;">
+        <button id="exportBtn">Export JSON</button>
+        <button id="importBtn" class="btn-ghost">Import JSON (paste)</button>
+        <button id="resetDbBtn" class="btn-danger">Reset ke Default</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // ----- Default database (entries with parameters / dalil) -----
+    const DEFAULT_DB = [
+      {
+        id: 'sedekah',
+        category: 'pahala',
+        label: 'Sedekah',
+        multiplier: 700,
+        unit: '× (perkiraan pahala)',
+        source: 'Al-Baqarah 2:261 — perumpamaan 7 bulir × 100 = 700'
+      },
+      {
+        id: 'shalat_jamaah',
+        category: 'pahala',
+        label: 'Shalat berjamaah',
+        multiplier: 27,
+        unit: '× (keutamaan)',
+        source: "Hadits Muttafaqun 'alaih (Bukhari & Muslim) — 27× keutamaan"
+      },
+      {
+        id: 'shalawat',
+        category: 'pahala',
+        label: 'Shalawat',
+        multiplier: 10,
+        unit: 'balasan (perkiraan)',
+        source: 'Beberapa hadits memuji shalawat; angka 10 di sini bersifat ilustratif'
+      },
+      {
+        id: 'zina',
+        category: 'dosa',
+        label: 'Zina',
+        multiplier: 80,
+        unit: 'tahun ibadah tidak diterima (ilustratif)',
+        source: 'Dosa besar — Qur`an & Hadits; angka 80 adalah parameter ilustratif'
+      },
+      {
+        id: 'riba',
+        category: 'dosa',
+        label: 'Riba',
+        multiplier: null,
+        unit: '',
+        source: 'Al-Baqarah 2:275-279 — riba dikecam; tidak ada angka pengalian eksplisit'
+      }
+    ];
+
+    // ----- Storage helpers -----
+    const DB_KEY = 'pahala_dosa_db_v1';
+    function loadDb(){
+      try{
+        const raw = localStorage.getItem(DB_KEY);
+        if(!raw) return JSON.parse(JSON.stringify(DEFAULT_DB));
+        const parsed = JSON.parse(raw);
+        if(!Array.isArray(parsed)) throw new Error('invalid db');
+        return parsed;
+      } catch(e){
+        console.warn('Gagal load DB, pakai default', e);
+        return JSON.parse(JSON.stringify(DEFAULT_DB));
+      }
+    }
+    function saveDb(db){
+      localStorage.setItem(DB_KEY, JSON.stringify(db));
+    }
+    function resetDb(){
+      localStorage.removeItem(DB_KEY);
+      db = JSON.parse(JSON.stringify(DEFAULT_DB));
+      renderDbTable();
+      populateActions();
+    }
+
+    // ----- App state -----
+    let db = loadDb();
+
+    // UI refs
+    const categoryEl = document.getElementById('category');
+    const actionSelect = document.getElementById('actionSelect');
+    const singleInput = document.getElementById('singleInput');
+    const resultTitle = document.getElementById('resultTitle');
+    const resultMain = document.getElementById('resultMain');
+    const resultDetail = document.getElementById('resultDetail');
+    const dalilBox = document.getElementById('dalilBox');
+    const summaryInput = document.getElementById('summaryInput');
+    const sourceShort = document.getElementById('sourceShort');
+    const dbCount = document.getElementById('dbCount');
+
+    // DB panel refs
+    const toggleDbBtn = document.getElementById('toggleDbBtn');
+    const dbPanel = document.getElementById('dbPanel');
+    const dbTableBody = document.querySelector('#dbTable tbody');
+    const dbId = document.getElementById('dbId');
+    const dbLabel = document.getElementById('dbLabel');
+    const dbCategory = document.getElementById('dbCategory');
+    const dbMultiplier = document.getElementById('dbMultiplier');
+    const dbUnit = document.getElementById('dbUnit');
+    const dbSource = document.getElementById('dbSource');
+    const saveDbBtn = document.getElementById('saveDbBtn');
+    const clearFormBtn = document.getElementById('clearFormBtn');
+    const addSampleBtn = document.getElementById('addSampleBtn');
+    const closeDbBtn = document.getElementById('closeDbBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const resetDbBtn = document.getElementById('resetDbBtn');
+    const toggleDbCloseBtn = closeDbBtn;
+
+    // ----- Helpers -----
+    function findEntry(category, id){
+      return db.find(e => e.category === category && e.id === id) || null;
+    }
+    function formatRp(n){
+      if(!isFinite(n)) return '—';
+      return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
+    }
+    function formatNumber(n){
+      if(!isFinite(n)) return '—';
+      if(Number.isInteger(n)) return n.toLocaleString('id-ID');
+      return n.toLocaleString('id-ID',{maximumFractionDigits:2});
+    }
+
+    // ----- Populate action dropdown based on category -----
+    function populateActions(){
+      const cat = categoryEl.value;
+      actionSelect.innerHTML = '';
+      const list = db.filter(e => e.category === cat);
+      list.forEach(e=>{
+        const opt = document.createElement('option');
+        opt.value = e.id;
+        opt.textContent = e.label;
+        actionSelect.appendChild(opt);
+      });
+      // if none -> placeholder
+      if(list.length === 0){
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'Tidak ada entri';
+        actionSelect.appendChild(opt);
+      }
+      dbCount.textContent = db.length + ' entri';
+      updateResult();
+    }
+
+    // ----- Render DB table -----
+    function renderDbTable(){
+      dbTableBody.innerHTML = '';
+      db.forEach((e, idx)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(e.id)}</td>
+          <td>${escapeHtml(e.label)}</td>
+          <td>${escapeHtml(e.category)}</td>
+          <td>${e.multiplier !== null && e.multiplier !== undefined ? escapeHtml(e.multiplier) : '<span class="muted-row">kualitatif</span>'}</td>
+          <td>${escapeHtml(e.unit || '')}</td>
+          <td>${escapeHtml(e.source || '')}</td>
+          <td class="actions">
+            <button data-idx="${idx}" class="editBtn">Edit</button>
+            <button data-idx="${idx}" class="delBtn btn-ghost">Hapus</button>
+          </td>
+        `;
+        dbTableBody.appendChild(tr);
+      });
+      // attach handlers
+      document.querySelectorAll('.editBtn').forEach(b=>{
+        b.addEventListener('click', ev=>{
+          const i = Number(ev.currentTarget.getAttribute('data-idx'));
+          const item = db[i];
+          dbId.value = item.id;
+          dbLabel.value = item.label;
+          dbCategory.value = item.category;
+          dbMultiplier.value = item.multiplier !== null && item.multiplier !== undefined ? item.multiplier : '';
+          dbUnit.value = item.unit || '';
+          dbSource.value = item.source || '';
+        });
+      });
+      document.querySelectorAll('.delBtn').forEach(b=>{
+        b.addEventListener('click', ev=>{
+          const i = Number(ev.currentTarget.getAttribute('data-idx'));
+          if(!confirm('Hapus entri "'+db[i].label+'"?')) return;
+          db.splice(i,1);
+          saveDb(db);
+          renderDbTable();
+          populateActions();
+        });
+      });
+      dbCount.textContent = db.length + ' entri';
+    }
+
+    // ----- Update result area -----
+    function updateResult(){
+      const cat = categoryEl.value;
+      const actionId = actionSelect.value;
+      const entry = findEntry(cat, actionId);
+      const raw = singleInput.value;
+      const val = Number(raw);
+
+      if(!entry){
+        resultTitle.textContent = '—';
+        resultMain.textContent = 'Pilih entri yang valid.';
+        resultDetail.textContent = '';
+        dalilBox.style.display = 'none';
+        sourceShort.textContent = '—';
+        summaryInput.textContent = '—';
+        return;
+      }
+
+      resultTitle.textContent = entry.label;
+      dalilBox.style.display = 'block';
+      dalilBox.textContent = entry.source || 'Sumber tidak tersedia.';
+
+      sourceShort.textContent = entry.source || '—';
+      summaryInput.textContent = raw ? (entry.id === 'sedekah' ? formatRp(val) : formatNumber(val)+' kejadian') : '—';
+
+      if(entry.multiplier !== null && entry.multiplier !== undefined && isFinite(entry.multiplier)){
+        if(!raw || isNaN(val) || val <= 0){
+          resultMain.textContent = 'Masukkan angka > 0 untuk melihat perhitungan.';
+          resultDetail.textContent = `Rumus: input × ${entry.multiplier} (${entry.unit || 'unit'})`;
+          return;
+        }
+        const total = val * entry.multiplier;
+        if(entry.id === 'sedekah'){
+          resultMain.textContent = `${formatRp(total)}  (perkiraan: ${formatRp(val)} × ${entry.multiplier})`;
+          resultDetail.textContent = `Perumpamaan dari dalil: nominal × ${entry.multiplier}.`;
+        } else {
+          resultMain.textContent = `${formatNumber(total)} ${entry.unit || ''}`;
+          resultDetail.textContent = `${formatNumber(val)} × ${entry.multiplier} = ${formatNumber(total)} ${entry.unit || ''}`;
+        }
+      } else {
+        // qualitative
+        if(!raw || isNaN(val) || val <= 0){
+          resultMain.textContent = 'Diterangkan kualitatif (tidak ada multiplier numerik).';
+          resultDetail.textContent = entry.source || '';
+        } else {
+          resultMain.textContent = `${formatNumber(val)} kejadian — lihat dalil`;
+          resultDetail.textContent = entry.source || '';
+        }
+      }
+    }
+
+    // ----- Utility escapeHtml -----
+    function escapeHtml(s){
+      if(s === null || s === undefined) return '';
+      return String(s).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; });
+    }
+
+    // ----- DB form actions -----
+    saveDbBtn.addEventListener('click', ()=>{
+      const id = (dbId.value || '').trim();
+      const label = (dbLabel.value || '').trim();
+      const category = dbCategory.value;
+      const multiplierRaw = dbMultiplier.value.trim();
+      const multiplier = multiplierRaw === '' ? null : Number(multiplierRaw);
+      const unit = (dbUnit.value || '').trim();
+      const source = (dbSource.value || '').trim();
+
+      if(!id || !label){
+        alert('Isi id (unik) dan label.');
+        return;
+      }
+      // if id exists -> update
+      const existingIdx = db.findIndex(x => x.id === id);
+      if(existingIdx >= 0){
+        db[existingIdx] = { id, label, category, multiplier: isFinite(multiplier) ? multiplier : null, unit, source };
+      } else {
+        db.push({ id, label, category, multiplier: isFinite(multiplier) ? multiplier : null, unit, source });
+      }
+      // save and refresh
+      saveDb(db);
+      renderDbTable();
+      populateActions();
+      // clear form
+      dbId.value = ''; dbLabel.value=''; dbMultiplier.value=''; dbUnit.value=''; dbSource.value='';
+    });
+
+    clearFormBtn.addEventListener('click', ()=>{
+      dbId.value = ''; dbLabel.value=''; dbMultiplier.value=''; dbUnit.value=''; dbSource.value='';
+    });
+
+    addSampleBtn.addEventListener('click', ()=>{
+      // add a few commonly referenced entries quickly
+      const samples = [
+        { id:'puasa_ramadan', category:'pahala', label:'Puasa Ramadhan (ampunan dosa kecil)', multiplier:null, unit:'', source:'Hadits shahih: puasa Ramadhan menghapus dosa kecil bila disertai iman & ikhlas' },
+        { id:'haji_diterima', category:'pahala', label:'Haji yang diterima', multiplier:null, unit:'', source:'Hadits shahih: haji yang diterima menghapus dosa hingga seperti baru lahir' }
+      ];
+      samples.forEach(s=>{
+        if(!db.find(x=>x.id===s.id)) db.push(s);
+      });
+      saveDb(db);
+      renderDbTable();
+      populateActions();
+    });
+
+    // Edit / delete handled in renderDbTable via buttons
+
+    // toggle DB panel
+    toggleDbBtn.addEventListener('click', ()=>{ dbPanel.style.display = dbPanel.style.display === 'none' ? 'block' : 'none'; renderDbTable(); });
+    closeDbBtn.addEventListener('click', ()=>{ dbPanel.style.display = 'none'; });
+
+    // export json
+    exportBtn.addEventListener('click', ()=>{
+      const data = JSON.stringify(db, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'pahala_dosa_db.json';
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+
+    // import - simple prompt
+    importBtn.addEventListener('click', ()=>{
+      const txt = prompt('Paste JSON database di sini (array of entries). Mengimpor akan mengganti database saat ini. Cancel untuk batalkan.');
+      if(!txt) return;
+      try{
+        const parsed = JSON.parse(txt);
+        if(!Array.isArray(parsed)) throw new Error('Format harus array');
+        db = parsed.map(e=>{
+          return {
+            id: String(e.id || '').trim(),
+            label: String(e.label || '').trim(),
+            category: String(e.category || '').trim() || 'pahala',
+            multiplier: (e.multiplier === null || e.multiplier === undefined) ? null : Number(e.multiplier),
+            unit: String(e.unit || '').trim(),
+            source: String(e.source || '').trim()
+          };
+        }).filter(e=>e.id && e.label);
+        saveDb(db);
+        renderDbTable();
+        populateActions();
+        alert('Import berhasil: ' + db.length + ' entri.');
+      } catch(err){
+        alert('Import gagal: ' + err.message);
+      }
+    });
+
+    resetDbBtn.addEventListener('click', ()=>{
+      if(!confirm('Reset database ke default? Semua perubahan lokal akan hilang.')) return;
+      resetDb();
+    });
+
+    // ----- events for main controls -----
+    categoryEl.addEventListener('change', ()=>{ populateActions(); singleInput.value=''; updateResult(); });
+    actionSelect.addEventListener('change', ()=>{ singleInput.value=''; updateResult(); });
+    singleInput.addEventListener('input', updateResult);
+    document.getElementById('resetBtn').addEventListener('click', ()=>{ categoryEl.value='pahala'; populateActions(); singleInput.value=''; updateResult(); });
+
+    // initialize
+    renderDbTable();
+    populateActions();
+    updateResult();
+
+    // ensure db saved on unload if changed
+    window.addEventListener('beforeunload', ()=> saveDb(db));
+  </script>
+</body>
+</html>
